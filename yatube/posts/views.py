@@ -155,7 +155,9 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     username = User.objects.get(username=username)
-    checking_subscription = Follow.objects.filter(user=request.user, author=username)
+    checking_subscription = (
+        Follow.objects.filter(user=request.user, author=username)
+    )
     if request.user != username and not checking_subscription:
         follow = Follow()
         follow.user = request.user
