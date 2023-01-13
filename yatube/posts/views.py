@@ -155,11 +155,11 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     username = User.objects.get(username=username)
-    follow = Follow()
-    follow.user = request.user
-    follow.author = username
-    follow.save()
-    print(follow)
+    if request.user != username:
+        follow = Follow()
+        follow.user = request.user
+        follow.author = username
+        follow.save()
     return redirect('posts:profile', username=username)
 
 

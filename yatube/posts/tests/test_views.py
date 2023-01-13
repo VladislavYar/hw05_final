@@ -26,6 +26,10 @@ class PostPagesTests(TestCase):
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
 
+        cls.user_subscriber = User.objects.create_user(username='Subscriber')
+        cls.subscriber_client = Client()
+        cls.subscriber_client.force_login(cls.user_subscriber)
+
         small_gif = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
             b'\x01\x00\x80\x00\x00\x00\x00\x00'
@@ -224,7 +228,7 @@ class PostPagesTests(TestCase):
     def test_follow(self):
         """Проверка подписки пользователя на автора."""
         quantity_follow = Follow.objects.all().count()
-        PostPagesTests.authorized_client.get(
+        PostPagesTests.subscriber_client.get(
             reverse('posts:profile_follow',
                     kwargs={'username': PostPagesTests.user})
         )
@@ -233,13 +237,13 @@ class PostPagesTests(TestCase):
 
     def test_unfollow(self):
         """Проверка отписки пользователя от автора."""
-        PostPagesTests.authorized_client.get(
+        PostPagesTests.subscriber_client.get(
             reverse('posts:profile_follow',
                     kwargs={'username': PostPagesTests.user})
         )
         quantity_follow = Follow.objects.all().count()
 
-        PostPagesTests.authorized_client.get(
+        PostPagesTests.subscriber_client.get(
             reverse('posts:profile_unfollow',
                     kwargs={'username': PostPagesTests.user})
         )
@@ -248,10 +252,10 @@ class PostPagesTests(TestCase):
 
     def test_post_present_from_the_follow(self):
         """Пост присутсвует в ленте подписчика."""
-        Follow.objects.create(user=PostPagesTests.user,
+        Follow.objects.create(user=PostPagesTests.user_subscriber,
                               author=PostPagesTests.user)
         response = (
-            PostPagesTests.authorized_client.
+            PostPagesTests.subscriber_client.
             get(reverse('posts:follow_index'))
         )
         self.assertIn(PostPagesTests.post,
@@ -260,10 +264,20 @@ class PostPagesTests(TestCase):
     def test_post_missing_from_the_follow(self):
         """Пост отсутсвует в ленте подписчика."""
         response = (
-            PostPagesTests.authorized_client.
+            PostPagesTests.subscriber_client.
             get(reverse('posts:follow_index'))
         )
         self.assertNotIn(PostPagesTests.post, response.context.get('page_obj'))
+
+    def test_not_follow(self):
+        """Проверка отсутвия возможности подписки самого на себя."""
+        quantity_follow = Follow.objects.all().count()
+        PostPagesTests.authorized_client.get(
+            reverse('posts:profile_follow',
+                    kwargs={'username': PostPagesTests.user})
+        )
+        quantity_follow_new = Follow.objects.all().count()
+        self.assertEqual(quantity_follow, quantity_follow_new)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
