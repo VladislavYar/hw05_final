@@ -269,7 +269,7 @@ class PostPagesTests(TestCase):
         )
         self.assertNotIn(PostPagesTests.post, response.context.get('page_obj'))
 
-    def test_not_follow(self):
+    def test_not_follow_yourself(self):
         """Проверка отсутвия возможности подписки самого на себя."""
         quantity_follow = Follow.objects.all().count()
         PostPagesTests.authorized_client.get(
@@ -277,6 +277,23 @@ class PostPagesTests(TestCase):
                     kwargs={'username': PostPagesTests.user})
         )
         quantity_follow_new = Follow.objects.all().count()
+        self.assertEqual(quantity_follow, quantity_follow_new)
+
+    def test_follow(self):
+        """Проверка подписки пользователя на автора."""
+        PostPagesTests.subscriber_client.get(
+            reverse('posts:profile_follow',
+                    kwargs={'username': PostPagesTests.user})
+        )
+        quantity_follow = Follow.objects.all().count()
+
+        PostPagesTests.subscriber_client.get(
+            reverse('posts:profile_follow',
+                    kwargs={'username': PostPagesTests.user})
+        )
+
+        quantity_follow_new = Follow.objects.all().count()
+
         self.assertEqual(quantity_follow, quantity_follow_new)
 
 
