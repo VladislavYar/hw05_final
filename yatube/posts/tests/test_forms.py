@@ -58,6 +58,7 @@ class PostCreateFormTests(TestCase):
 
         form_data = {
             'text': 'Тестовый текст',
+            'group': PostCreateFormTests.group.id,
             'image': uploaded,
         }
         response = PostCreateFormTests.authorized_client.post(
@@ -77,6 +78,7 @@ class PostCreateFormTests(TestCase):
                 author=PostCreateFormTests.user,
                 text='Тестовый текст',
                 image='posts/small.gif',
+                group=PostCreateFormTests.group.id,
             ).exists()
         )
 
@@ -115,6 +117,12 @@ class PostEditFormTests(TestCase):
             author=cls.user,
         )
 
+        cls.group = Group.objects.create(
+            title='Тестовая группа',
+            slug='test-slug',
+            description='Тестовое описание',
+        )
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -145,6 +153,7 @@ class PostEditFormTests(TestCase):
 
         form_data = {
             'text': 'Тестовый текст',
+            'group': PostEditFormTests.group.id,
             'image': uploaded,
         }
         response = PostEditFormTests.authorized_client.post(
@@ -165,6 +174,7 @@ class PostEditFormTests(TestCase):
             Post.objects.filter(
                 author=PostEditFormTests.user,
                 text='Тестовый текст',
+                group=PostEditFormTests.group.id,
                 image='posts/small.gif',
             ).exists()
         )
@@ -208,8 +218,6 @@ class CommentFormTests(TestCase):
             text='Текст поста',
             author=cls.user,
         )
-
-        cls.form = CommentForm()
 
     def test_add_comment(self):
         """Валидная форма создает запись в Comment."""

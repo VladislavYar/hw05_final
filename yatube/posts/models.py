@@ -7,13 +7,21 @@ User = get_user_model()
 
 
 class Group(models.Model):
-    title = models.CharField(max_length=200, verbose_name='Название группы',
-                             help_text='Название группы')
-    description = models.TextField(verbose_name='Описание группы',
-                                   help_text='Описание группы')
-    slug = models.SlugField(max_length=255, unique=True,
-                            verbose_name='URL',
-                            help_text='URL')
+    title = models.CharField(
+        max_length=200,
+        verbose_name='Название группы',
+        help_text='Название группы',
+    )
+    description = models.TextField(
+        verbose_name='Описание группы',
+        help_text='Описание группы',
+    )
+    slug = models.SlugField(
+        max_length=255,
+        unique=True,
+        verbose_name='URL',
+        help_text='URL',
+    )
 
     def __str__(self):
         return self.title
@@ -37,10 +45,10 @@ class Follow(models.Model):
     )
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'author'],
-                                    name='unique_follow')
-        ]
+        constraints = (
+            models.UniqueConstraint(fields=('user', 'author'),
+                                    name='unique_follow'),
+        )
 
     def __str__(self):
         return (
