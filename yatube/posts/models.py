@@ -36,6 +36,18 @@ class Follow(models.Model):
         help_text='Имя автора'
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'author'],
+                                    name='unique_follow')
+        ]
+
+    def __str__(self):
+        return (
+            f'{self.user.username}'
+            f' подписан на {self.author.username}'
+        )
+
 
 class Post(PubDateModel):
     text = models.TextField(verbose_name='Текст поста',
@@ -58,6 +70,7 @@ class Post(PubDateModel):
 
     image = models.ImageField(
         'Картинка',
+        help_text='Картинка',
         upload_to='posts/',
         blank=True
     )

@@ -115,8 +115,6 @@ class PostEditFormTests(TestCase):
             author=cls.user,
         )
 
-        cls.form = PostForm()
-
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -233,5 +231,7 @@ class CommentFormTests(TestCase):
         self.assertTrue(
             Comment.objects.filter(
                 text='Тестовый текст',
+                post=CommentFormTests.post.pk,
+                author=CommentFormTests.user,
             ).exists()
         )

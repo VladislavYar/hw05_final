@@ -11,7 +11,6 @@ from django.conf import settings
 
 from posts.models import Post, Group, Follow
 
-NUMBER_OF_POSTS = settings.NUMBER_OF_POSTS
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 User = get_user_model()
@@ -92,6 +91,8 @@ class PostPagesTests(TestCase):
             reverse('posts:post_edit',
                     kwargs={'post_id': PostPagesTests.post.id}):
                         'posts/create_post.html',
+            reverse('posts:follow_index'):
+                        'posts/follow.html',
         }
         for reverse_name, template in templates_pages_names.items():
             with self.subTest(reverse_name=reverse_name):
@@ -208,23 +209,6 @@ class PostPagesTests(TestCase):
         )
         self.assertNotIn(PostPagesTests.post, response.context.get('page_obj'))
 
-    def test_cache_index(self):
-        """Проверка хранения и очищения кэша для index."""
-        response = PostPagesTests.authorized_client.get(reverse('posts:index'))
-        posts_cashe = response.content
-        Post.objects.create(
-            text='Новый пост',
-            author=PostPagesTests.user,
-        )
-        response = PostPagesTests.authorized_client.get(reverse('posts:index'))
-        posts_old = response.content
-        self.assertEqual(posts_old, posts_cashe)
-        cache.clear()
-
-        response = PostPagesTests.authorized_client.get(reverse('posts:index'))
-        posts_new = response.content
-        self.assertNotEqual(posts_old, posts_new)
-
     def test_follow(self):
         """Проверка подписки пользователя на автора."""
         quantity_follow = Follow.objects.all().count()
@@ -235,12 +219,20 @@ class PostPagesTests(TestCase):
         quantity_follow_new = Follow.objects.all().count()
         self.assertNotEqual(quantity_follow, quantity_follow_new)
 
+        self.assertTrue(
+            Follow.objects.filter(
+                user=PostPagesTests.user_subscriber,
+                author=PostPagesTests.user,
+            ).exists()
+        )
+
     def test_unfollow(self):
         """Проверка отписки пользователя от автора."""
-        PostPagesTests.subscriber_client.get(
-            reverse('posts:profile_follow',
-                    kwargs={'username': PostPagesTests.user})
+        Follow.objects.create(
+            user=PostPagesTests.user_subscriber,
+            author=PostPagesTests.user
         )
+
         quantity_follow = Follow.objects.all().count()
 
         PostPagesTests.subscriber_client.get(
@@ -249,6 +241,13 @@ class PostPagesTests(TestCase):
         )
         quantity_follow_new = Follow.objects.all().count()
         self.assertNotEqual(quantity_follow, quantity_follow_new)
+
+        self.assertFalse(
+            Follow.objects.filter(
+                user=PostPagesTests.user_subscriber,
+                author=PostPagesTests.user,
+            ).exists()
+        )
 
     def test_post_present_from_the_follow(self):
         """Пост присутсвует в ленте подписчика."""
@@ -279,22 +278,12 @@ class PostPagesTests(TestCase):
         quantity_follow_new = Follow.objects.all().count()
         self.assertEqual(quantity_follow, quantity_follow_new)
 
-    def test_follow(self):
-        """Проверка подписки пользователя на автора."""
-        PostPagesTests.subscriber_client.get(
-            reverse('posts:profile_follow',
-                    kwargs={'username': PostPagesTests.user})
+        self.assertFalse(
+            Follow.objects.filter(
+                user=PostPagesTests.user,
+                author=PostPagesTests.user,
+            ).exists()
         )
-        quantity_follow = Follow.objects.all().count()
-
-        PostPagesTests.subscriber_client.get(
-            reverse('posts:profile_follow',
-                    kwargs={'username': PostPagesTests.user})
-        )
-
-        quantity_follow_new = Follow.objects.all().count()
-
-        self.assertEqual(quantity_follow, quantity_follow_new)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -355,7 +344,7 @@ class PaginatorViewsTest(TestCase):
                     get(reverse_name)
                 )
                 self.assertEqual(len(response.context['page_obj']),
-                                 NUMBER_OF_POSTS)
+                                 settings.NUMBER_OF_POSTS)
 
     def test_second_page_contains_three_records(self):
         reverse_names = [reverse('posts:index') + '?page=2',
@@ -368,7 +357,7 @@ class PaginatorViewsTest(TestCase):
                          ]
 
         number_of_post_second_page = (Post.objects.all().count()
-                                      - NUMBER_OF_POSTS)
+                                      - settings.NUMBER_OF_POSTS)
         for reverse_name in reverse_names:
             with self.subTest(reverse_name=reverse_name):
                 response = (
@@ -377,3 +366,29 @@ class PaginatorViewsTest(TestCase):
                 )
                 self.assertEqual(len(response.context['page_obj']),
                                  number_of_post_second_page)
+
+
+class CacheTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='HasNoName')
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
+
+    def test_cache_index(self):
+        """Проверка хранения и очищения кэша для index."""
+        response = CacheTest.authorized_client.get(reverse('posts:index'))
+        posts_cashe = response.content
+        Post.objects.create(
+            text='Новый пост',
+            author=CacheTest.user,
+        )
+        response = CacheTest.authorized_client.get(reverse('posts:index'))
+        posts_old = response.content
+        self.assertEqual(posts_old, posts_cashe)
+        cache.clear()
+
+        response = CacheTest.authorized_client.get(reverse('posts:index'))
+        posts_new = response.content
+        self.assertNotEqual(posts_old, posts_new)
